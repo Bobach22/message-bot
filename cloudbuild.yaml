@@ -1,0 +1,13 @@
+steps:
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    args:
+      - "-c"
+      - |
+        TELEGRAM_TOKEN=$(gcloud secrets versions access latest --secret=TELEGRAM_MESSAGE_BOT_TOKEN)
+        gcloud functions deploy message-bot \
+          --runtime nodejs18 \
+          --region=europe-central2 \
+          --source=. \
+          --trigger-http \
+          --entry-point app \
+          --set-env-vars TELEGRAM_TOKEN=${TELEGRAM_TOKEN},OTHER_VAR=${_OTHER_VAR}
