@@ -102,10 +102,4 @@ app.post('/send-message', (req, res) => {
     });
 });
 
-// Start the Express server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
 exports.app = app;
