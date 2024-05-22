@@ -9,8 +9,11 @@ const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
 const app = express();
 app.use(bodyParser.json());
 
+// Use /tmp directory for the SQLite database
+const dbPath = path.join('/tmp', 'usernumbers.db');
+
 // Initialize the database
-const db = new sqlite3.Database('./usernumbers.db');
+const db = new sqlite3.Database(dbPath);
 
 // Initialize the database and create index
 db.serialize(() => {
