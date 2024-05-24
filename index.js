@@ -3,7 +3,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const dotenv = require('dotenv');
 
+// Load environment variables
+dotenv.config();
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
 
@@ -11,10 +14,15 @@ const app = express();
 app.use(bodyParser.json());
 
 // Use /tmp directory for the SQLite database
-const dbPath = path.join('/tmp', 'usernumbers.db');
+const dbPath = path.join('./data', 'usernumbers.db');
 
 // Initialize the database
-const db = new sqlite3.Database(dbPath);
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        return console.error(err.message);
+    }
+    console.log('Connected to the SQLite database');
+});
 
 // Initialize the database and create index
 db.serialize(() => {
@@ -38,19 +46,21 @@ bot.onText(/\/start/, (msg) => {
                 }
             });
         }
+
+            // If the phone number is not registered, show the keyboard
+        bot.sendMessage(msg.chat.id, "Welcome! Please share your phone number.", {
+            reply_markup: {
+                keyboard: [[{
+                    text: "Share my phone number",
+                    request_contact: true,
+                }]],
+                // one_time_keyboard: true,
+                resize_keyboard: true,
+            }
+        });
     });
     
-    // If the phone number is not registered, show the keyboard
-    bot.sendMessage(msg.chat.id, "Welcome! Please share your phone number.", {
-        reply_markup: {
-            keyboard: [[{
-                text: "Share my phone number",
-                request_contact: true,
-            }]],
-            one_time_keyboard: true,
-            resize_keyboard: true,
-        }
-    });
+
 });
 
 // Handle contact sharing
@@ -88,7 +98,9 @@ app.post('/send-message', (req, res) => {
     const { phone, message } = req.body;
 
     db.serialize(() => {
-        db.each("SELECT chat_id FROM users WHERE phone_number = ?", [phone], (err, row) => {
+        db.get("SELECT chat_id FROM users WHERE phone_number = ?", [phone], (err, row) => {
+        
+            console.log(`phone: ${phone}`, `message: ${message}`, `row: ${row}`);
             // If the phone number is not found, return a 404
             if (err) {
                 return res.status(500).send({ error: 'Internal server error' });
@@ -99,11 +111,21 @@ app.post('/send-message', (req, res) => {
             }
 
             // Send the message to the chat id
-            bot.sendMessage(row.chat_id, message);
-
-            return res.status(200).send({ message: 'Message sent' });
+            bot.sendMessage(row.chat_id, message)
+                .then(() => {
+                    return res.status(200).send({ message: 'Message sent' });
+                })
+                .catch((err) => {
+                    console.error(err);
+                    return res.status(500).send({ error: 'Failed to send message' });
+                });
         });
     });
 });
 
-exports.app = app;
+// Start the Express server
+const PORT = process.env.APP_PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});

@@ -1,0 +1,70 @@
+name: Deployment
+
+on:
+  push:
+    branches:
+      - main
+env:
+  IMAGE_NAME: ${{ secrets.LOCATION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/artifacts/message-bot:latest
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      
+      - name: Create .env file
+        run: |
+          echo "TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}" >> .env
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          version: 'latest'
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker to use Google Artifact Registry
+        run: |
+          echo '{"credHelpers": {"gcr.io": "gcloud", "us.gcr.io": "gcloud", "eu.gcr.io": "gcloud", "asia.gcr.io": "gcloud", "europe-central2-docker.pkg.dev": "gcloud" }}' > ~/.docker/config.json
+
+      - name: Build and push Docker image
+        run: |
+          docker buildx build --push --tag $IMAGE_NAME .
+
+      - name: Add SSH known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          LOCATION: ${{ secrets.LOCATION }}
+          APP_PORT: ${{ secrets.APP_PORT }}
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          chmod +x deploy.sh
+          ./deploy.sh
+
+        
