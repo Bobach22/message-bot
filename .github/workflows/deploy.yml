@@ -5,11 +5,12 @@ on:
     branches:
       - main
 env:
-  IMAGE_NAME: ${{ secrets.LOCATION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/artifacts/message-bot:latest
+  IMAGE_NAME: ${{ vars.LOCATION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/artifacts/message-bot:latest
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment: prod
 
     steps:
       - name: Checkout
@@ -54,9 +55,9 @@ jobs:
           SSH_KEY: ${{ secrets.SSH_KEY }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
-          PROJECT_ID: ${{ secrets.PROJECT_ID }}
-          LOCATION: ${{ secrets.LOCATION }}
-          APP_PORT: ${{ secrets.APP_PORT }}
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          LOCATION: ${{ vars.LOCATION }}
+          APP_PORT: ${{ vars.APP_PORT }}
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
