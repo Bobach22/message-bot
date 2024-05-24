@@ -94,7 +94,7 @@ bot.on('contact', (msg) => {
 });
 
 // Endpoint to send messages
-app.post('/send-message', (req, res) => {
+app.post('/api/send-message', (req, res) => {
     const { phone, message } = req.body;
 
     db.serialize(() => {
