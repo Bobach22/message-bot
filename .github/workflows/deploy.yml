@@ -67,5 +67,9 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           chmod +x deploy.sh
           ./deploy.sh
+      - name: Clean up
+        run: |
+          rm -rf ~/.ssh
+          rm -f .env
 
         
